@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Input Your Information</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>회원 정보 입력</h1>
+        <form id="infoForm">
+            <label for="name">이름:</label>
+            <input type="text" id="name" required><br>
+
+            <label for="age">나이:</label>
+            <input type="number" id="age" required><br>
+
+            <label for="gender">성별:</label>
+            <select id="gender" required>
+                <option value="male">남자</option>
+                <option value="female">여자</option>
+            </select><br>
+
+            <label for="height">키 (cm):</label>
+            <input type="number" id="height" required><br>
+
+            <label for="weight">몸무게 (kg):</label>
+            <input type="number" id="weight" required><br>
+
+            <button type="button" onclick="goToThirdPage()">다음</button>
+        </form>
+    </div>
+
+    <script>
+        function goToThirdPage() {
+            const name = document.getElementById('name').value;
+            const age = document.getElementById('age').value;
+            const gender = document.getElementById('gender').value;
+            const height = document.getElementById('height').value;
+            const weight = document.getElementById('weight').value;
+
+            if (name && age && gender && height && weight) {
+                // URL로 정보를 전달하거나, 페이지에서 JavaScript로 값을 저장할 수 있습니다.
+                localStorage.setItem('userInfo', JSON.stringify({ name, age, gender, height, weight }));
+                window.location.href = 'third.html';
+            } else {
+                alert("모든 정보를 입력해주세요.");
+            }
+        }
+    </script>
+</body>
+</html>
+

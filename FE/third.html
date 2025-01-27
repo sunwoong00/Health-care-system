@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원 정보 확인</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>회원 정보 확인</h1>
+        <div id="userInfo"></div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+
+            if (userInfo) {
+                document.getElementById('userInfo').innerHTML = `
+                    <p>이름: ${userInfo.name}</p>
+                    <p>나이: ${userInfo.age}</p>
+                    <p>성별: ${userInfo.gender}</p>
+                    <p>키: ${userInfo.height} cm</p>
+                    <p>몸무게: ${userInfo.weight} kg</p>
+                `;
+            } else {
+                document.getElementById('userInfo').innerHTML = "<p>정보가 없습니다.</p>";
+            }
+        };
+    </script>
+</body>
+</html>
+
