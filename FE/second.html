@@ -28,12 +28,12 @@
             <label for="weight">몸무게 (kg):</label>
             <input type="number" id="weight" required><br>
 
-            <button type="button" onclick="goToThirdPage()">다음</button>
+            <button type="button" onclick="submitUserData()">다음</button>
         </form>
     </div>
 
     <script>
-        function goToThirdPage() {
+        async function submitUserData() {
             const name = document.getElementById('name').value;
             const age = document.getElementById('age').value;
             const gender = document.getElementById('gender').value;
@@ -41,9 +41,30 @@
             const weight = document.getElementById('weight').value;
 
             if (name && age && gender && height && weight) {
-                // URL로 정보를 전달하거나, 페이지에서 JavaScript로 값을 저장할 수 있습니다.
-                localStorage.setItem('userInfo', JSON.stringify({ name, age, gender, height, weight }));
-                window.location.href = 'third.html';
+                const userData = { name, age: parseInt(age), gender, height: parseInt(height), weight: parseInt(weight) };
+
+                try {
+                    const response = await fetch('http://127.0.0.1:5000/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(userData)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        alert("회원 정보가 저장되었습니다.");
+                        localStorage.setItem('userInfo', JSON.stringify(userData));
+                        window.location.href = 'third.html';
+                    } else {
+                        alert("에러 발생: " + result.detail);
+                    }
+                } catch (error) {
+                    alert("서버 요청 중 오류가 발생했습니다.");
+                    console.error(error);
+                }
             } else {
                 alert("모든 정보를 입력해주세요.");
             }
@@ -51,4 +72,3 @@
     </script>
 </body>
 </html>
-

@@ -3,32 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>회원 정보 확인</title>
+    <title>하루 식사 기록</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>회원 정보 확인</h1>
-        <div id="userInfo"></div>
+        <h1>오늘의 식사 입력</h1>
+        <form id="mealForm">
+            <label for="breakfast">아침:</label>
+            <input type="text" id="breakfast" placeholder="ex) 치킨 샐러드"><br>
+
+            <label for="lunch">점심:</label>
+            <input type="text" id="lunch" placeholder="ex) 김밥 한줄, 라면"><br>
+
+            <label for="dinner">저녁:</label>
+            <input type="text" id="dinner" placeholder="ex) 삼겹살 200g, 밥 한공기"><br>
+
+            <button type="button" onclick="submitMeals()">제출</button>
+        </form>
     </div>
 
     <script>
-        window.onload = function() {
-            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+        function submitMeals() {
+            const breakfast = document.getElementById('breakfast').value;
+            const lunch = document.getElementById('lunch').value;
+            const dinner = document.getElementById('dinner').value;
 
-            if (userInfo) {
-                document.getElementById('userInfo').innerHTML = `
-                    <p>이름: ${userInfo.name}</p>
-                    <p>나이: ${userInfo.age}</p>
-                    <p>성별: ${userInfo.gender}</p>
-                    <p>키: ${userInfo.height} cm</p>
-                    <p>몸무게: ${userInfo.weight} kg</p>
-                `;
+            if (breakfast && lunch && dinner) {
+                const mealData = { breakfast, lunch, dinner };
+
+                // localStorage에 식사 데이터 저장
+                localStorage.setItem('mealData', JSON.stringify(mealData));
+
+                // 네 번째 페이지로 이동
+                window.location.href = 'fourth.html';
             } else {
-                document.getElementById('userInfo').innerHTML = "<p>정보가 없습니다.</p>";
+                alert("모든 식사 정보를 입력해주세요.");
             }
-        };
+        }
     </script>
 </body>
 </html>
-

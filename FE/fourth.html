@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>식습관 분석 결과</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>오늘의 식습관 분석</h1>
+        <div id="loading">분석 중...</div>
+        <div id="analysisResult" style="display: none;"></div>
+    </div>
+
+    <script>
+        window.onload = async function() {
+            const mealData = JSON.parse(localStorage.getItem('mealData'));
+
+            if (!mealData) {
+                document.getElementById('analysisResult').innerHTML = "<p>식사 데이터가 없습니다.</p>";
+                return;
+            }
+
+            try {
+                const response = await fetch("http://127.0.0.1:5000/food", { // FastAPI 서버 주소
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(mealData)
+                });
+
+                if (!response.ok) {
+                    throw new Error("서버 응답 오류");
+                }
+
+                const result = await response.json();
+                document.getElementById('loading').style.display = "none"; // 로딩 메시지 숨김
+                document.getElementById('analysisResult').style.display = "block";
+                document.getElementById('analysisResult').innerHTML = `<p>${result.analysis}</p>`;
+            } catch (error) {
+                document.getElementById('loading').innerHTML = "분석 중 오류가 발생했습니다.";
+                console.error("Error:", error);
+            }
+        };
+    </script>
+</body>
+</html>
