@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,43 +10,65 @@
     <div class="container">
         <h1>오늘의 식습관 분석</h1>
         <div id="loading">분석 중...</div>
-        <div id="analysisResult" style="display: none;"></div>
+        <div id="analysisResult" style="display: none;">
+            <h2>분석 결과</h2>
+            <div id="llmOutput" class="analysis-content"></div>
+            <h2>참고 정보</h2>
+            <div id="retrievedDocs"></div>
+        </div>
     </div>
-<script>
-    window.onload = async function() {
-        const mealData = JSON.parse(localStorage.getItem('mealData'));
-        const userInfo = JSON.parse(localStorage.getItem('userInfo'));
 
-        if (!mealData || !userInfo) {
-            document.getElementById('analysisResult').innerHTML = "<p>필요한 데이터가 없습니다.</p>";
-            return;
-        }
+    <script>
+        window.onload = async function() {
+            const mealData = JSON.parse(localStorage.getItem('mealData'));
+            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
 
-        const requestData = {
-            user: userInfo,
-            food: mealData
-        };
-
-        try {
-            const response = await fetch("http://127.0.0.1:5000/food", { // FastAPI 서버 주소
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(requestData)
-            });
-
-            if (!response.ok) {
-                throw new Error("서버 응답 오류");
+            if (!mealData || !userInfo) {
+                document.getElementById('loading').style.display = "none";
+                document.getElementById('analysisResult').style.display = "block";
+                document.getElementById('llmOutput').innerHTML = "<p>⚠️ 필요한 데이터가 없습니다.</p>";
+                return;
             }
 
-            const result = await response.json();
-            document.getElementById('loading').style.display = "none"; // 로딩 메시지 숨김
-            document.getElementById('analysisResult').style.display = "block";
-            document.getElementById('analysisResult').innerHTML = `<p>${result.analysis}</p>`;
-        } catch (error) {
-            document.getElementById('loading').innerHTML = "분석 중 오류가 발생했습니다.";
-            console.error("Error:", error);
-        }
-    };
-</script>
+            const requestData = { 
+                user: userInfo, 
+                food: {
+                    breakfast: mealData.breakfast || "",
+                    lunch: mealData.lunch || "",
+                    dinner: mealData.dinner || ""
+                }
+            };
+
+            console.log("Sending request:", requestData);
+
+            try {
+                const response = await fetch("http://127.0.0.1:5000/food", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`서버 응답 오류: ${errorData.detail || response.status}`);
+                }
+
+                const result = await response.json();
+                document.getElementById('loading').style.display = "none";
+                document.getElementById('analysisResult').style.display = "block";
+                document.getElementById('llmOutput').innerHTML = `<div>${result.analysis.replace(/\n/g, '<br>')}</div>`;
+                document.getElementById('retrievedDocs').innerHTML = result.documents
+                    ? result.documents.map(doc => `<div class="retrieved-doc">${doc}</div>`).join('')
+                    : "<p>참고 문서 없음</p>";
+            } catch (error) {
+                document.getElementById('loading').style.display = "none";
+                document.getElementById('analysisResult').style.display = "block";
+                document.getElementById('llmOutput').innerHTML = `<p class="text-danger">❌ 분석 중 오류가 발생했습니다: ${error.message}</p>`;
+                console.error("Error:", error);
+            }
+        };
+    </script>
+</body>
+</html>

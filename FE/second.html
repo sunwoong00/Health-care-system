@@ -1,38 +1,67 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Input Your Information</title>
+    <title>회원 정보 입력</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <h1>회원 정보 입력</h1>
         <form id="infoForm">
-            <label for="name">이름:</label>
-            <input type="text" id="name" required><br>
+            <div class="mb-3">
+                <label for="name" class="form-label">이름:</label>
+                <input type="text" id="name" required>
+                <small class="text-danger" id="nameError"></small>
+            </div>
 
-            <label for="age">나이:</label>
-            <input type="number" id="age" required><br>
+            <div class="mb-3">
+                <label for="age" class="form-label">나이:</label>
+                <input type="number" id="age" required>
+                <small class="text-danger" id="ageError"></small>
+            </div>
 
-            <label for="gender">성별:</label>
-            <select id="gender" required>
-                <option value="male">남자</option>
-                <option value="female">여자</option>
-            </select><br>
+            <div class="mb-3">
+                <label for="gender" class="form-label">성별:</label>
+                <select id="gender" required>
+                    <option value="">선택하세요</option>
+                    <option value="male">남자</option>
+                    <option value="female">여자</option>
+                </select>
+                <small class="text-danger" id="genderError"></small>
+            </div>
 
-            <label for="height">키 (cm):</label>
-            <input type="number" id="height" required><br>
+            <div class="mb-3">
+                <label for="height" class="form-label">키 (cm):</label>
+                <input type="number" id="height" required>
+                <small class="text-danger" id="heightError"></small>
+            </div>
 
-            <label for="weight">몸무게 (kg):</label>
-            <input type="number" id="weight" required><br>
+            <div class="mb-3">
+                <label for="weight" class="form-label">몸무게 (kg):</label>
+                <input type="number" id="weight" required>
+                <small class="text-danger" id="weightError"></small>
+            </div>
 
-            <button type="button" onclick="submitUserData()">다음</button>
+            <button type="button" onclick="submitUserData()" id="submitButton">다음</button>
+            <p id="loadingMessage" style="display: none;">회원 정보를 저장하는 중...</p>
         </form>
     </div>
 
     <script>
+        function validateInput(id, message) {
+            const input = document.getElementById(id);
+            const errorMsg = document.getElementById(id + "Error");
+            if (!input.value) {
+                errorMsg.textContent = message;
+                return false;
+            } else {
+                errorMsg.textContent = "";
+                return true;
+            }
+        }
+
         async function submitUserData() {
             const name = document.getElementById('name').value;
             const age = document.getElementById('age').value;
@@ -44,23 +73,43 @@
                 const userData = { name, age: parseInt(age), gender, height: parseInt(height), weight: parseInt(weight) };
 
                 try {
-                    const response = await fetch('http://127.0.0.1:5000/login', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(userData)
-                    });
+                    // 서버에서 해당 사용자가 존재하는지 확인
+                    const checkResponse = await fetch(`http://127.0.0.1:5000/check_user?name=${name}`);
+                    const checkData = await checkResponse.json();
 
-                    const result = await response.json();
-
-                    if (response.ok) {
-                        alert("회원 정보가 저장되었습니다.");
-                        localStorage.setItem('userInfo', JSON.stringify(userData));
-                        window.location.href = 'third.html';
+                    if (checkResponse.ok && checkData.exists) {
+                        console.log("기존 사용자 발견. 데이터를 불러옵니다.");
                     } else {
-                        alert("에러 발생: " + result.detail);
+                        // 사용자 정보가 없으면 서버에 추가
+                        const response = await fetch('http://127.0.0.1:5000/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(userData)
+                        });
+
+                        if (!response.ok) {
+                            const result = await response.json();
+                            alert("에러 발생: " + result.detail);
+                            return;
+                        }
+
+                        alert("새로운 회원 정보가 저장되었습니다.");
                     }
+
+                    // localStorage에 사용자 정보 저장
+                    localStorage.setItem('userInfo', JSON.stringify(userData));
+
+                    // 사용자 식사 데이터 불러오기
+                    const mealsResponse = await fetch(`http://127.0.0.1:5000/get_meals?name=${name}`);
+                    const mealsData = await mealsResponse.json();
+
+                    if (mealsResponse.ok) {
+                        localStorage.setItem('mealData', JSON.stringify(mealsData));
+                    }
+
+                    // third.html로 이동
+                    window.location.href = 'third.html';
+
                 } catch (error) {
                     alert("서버 요청 중 오류가 발생했습니다.");
                     console.error(error);

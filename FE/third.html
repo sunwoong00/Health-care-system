@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,37 +10,86 @@
     <div class="container">
         <h1>오늘의 식사 입력</h1>
         <form id="mealForm">
-            <label for="breakfast">아침:</label>
-            <input type="text" id="breakfast" placeholder="ex) 치킨 샐러드"><br>
+            <div class="mb-3">
+                <label for="breakfast" class="form-label">아침:</label>
+                <input type="text" id="breakfast" placeholder="ex) 치킨 샐러드" required>
+                <small class="text-danger" id="breakfastError"></small>
+            </div>
 
-            <label for="lunch">점심:</label>
-            <input type="text" id="lunch" placeholder="ex) 김밥 한줄, 라면"><br>
+            <div class="mb-3">
+                <label for="lunch" class="form-label">점심:</label>
+                <input type="text" id="lunch" placeholder="ex) 김밥 한줄, 라면" required>
+                <small class="text-danger" id="lunchError"></small>
+            </div>
 
-            <label for="dinner">저녁:</label>
-            <input type="text" id="dinner" placeholder="ex) 삼겹살 200g, 밥 한공기"><br>
+            <div class="mb-3">
+                <label for="dinner" class="form-label">저녁:</label>
+                <input type="text" id="dinner" placeholder="ex) 삼겹살 200g, 밥 한공기" required>
+                <small class="text-danger" id="dinnerError"></small>
+            </div>
 
-            <button type="button" onclick="submitMeals()">제출</button>
+            <button type="button" onclick="submitMeals()" id="submitButton">제출</button>
+            <p id="successMessage" style="display: none;">✅ 저장되었습니다!</p>
         </form>
     </div>
 
     <script>
-        function submitMeals() {
+        function validateInput(id, message) {
+            const input = document.getElementById(id);
+            const errorMsg = document.getElementById(id + "Error");
+            if (!input.value) {
+                errorMsg.textContent = message;
+                return false;
+            } else {
+                errorMsg.textContent = "";
+                return true;
+            }
+        }
+
+        async function submitMeals() {
             const breakfast = document.getElementById('breakfast').value;
             const lunch = document.getElementById('lunch').value;
             const dinner = document.getElementById('dinner').value;
 
-            if (breakfast && lunch && dinner) {
-                const mealData = { breakfast, lunch, dinner };
+            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+            if (!userInfo) {
+                alert("로그인 정보가 없습니다. 다시 시도해주세요.");
+                return;
+            }
 
-                // localStorage에 식사 데이터 저장
-                localStorage.setItem('mealData', JSON.stringify(mealData));
+            const mealData = { breakfast, lunch, dinner, timestamp: new Date().toISOString() };
 
-                // 네 번째 페이지로 이동
-                window.location.href = 'fourth.html';
-            } else {
-                alert("모든 식사 정보를 입력해주세요.");
+            try {
+                const response = await fetch(`http://127.0.0.1:5000/add_meal`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ user: userInfo, meal: mealData })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert("식사 정보가 저장되었습니다.");
+                    localStorage.setItem('mealData', JSON.stringify(mealData));
+                    window.location.href = 'fourth.html';
+                } else {
+                    alert("에러 발생: " + result.detail);
+                }
+            } catch (error) {
+                alert("서버 요청 중 오류가 발생했습니다.");
+                console.error(error);
             }
         }
+
+        // 엔터 키로 제출
+        document.getElementById("mealForm").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                submitMeals();
+            }
+        });
     </script>
 </body>
 </html>
