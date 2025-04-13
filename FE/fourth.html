@@ -3,72 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>식습관 분석 결과</title>
-    <link rel="stylesheet" href="style.css">
+    <title>식단 분석 결과</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Roboto', sans-serif; background-color: #f5f7fa; color: #333; }
+        .container { max-width: 1200px; margin-top: 2rem; }
+        .card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 1.5rem; }
+        .card-header { background-color: #007bff; color: white; font-weight: 500; border-radius: 10px 10px 0 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { background-color: white; border-radius: 0 0 10px 10px; }
+        .card-body ul { padding-left: 20px; }
+        .references-card { background-color: #e9ecef; }
+        .spinner-container { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .error-message { display: none; color: #dc3545; font-weight: 500; }
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .card-header { font-size: 1rem; }
+            .references-card { margin-top: 1rem; }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>오늘의 식습관 분석</h1>
-        <div id="loading">분석 중...</div>
-        <div id="analysisResult" style="display: none;">
-            <h2>분석 결과</h2>
-            <div id="llmOutput" class="analysis-content"></div>
-            <h2>참고 정보</h2>
-            <div id="retrievedDocs"></div>
+        <h1 class="text-center mb-4">식단 분석 결과</h1>
+        <div class="row">
+            <div class="col-lg-8">
+                <div id="nutrition-balance" class="card">
+                    <div class="card-header" data-bs-toggle="collapse" data-bs-target="#nutrition-content">
+                        <span><i class="bi bi-clipboard-data me-2"></i>영양 균형</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div id="nutrition-content" class="collapse show card-body">
+                        <ul id="nutrition-list"></ul>
+                    </div>
+                </div>
+                <div id="improvements" class="card">
+                    <div class="card-header" data-bs-toggle="collapse" data-bs-target="#improvements-content">
+                        <span><i class="bi bi-lightbulb me-2"></i>개선점</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div id="improvements-content" class="collapse show card-body">
+                        <ul id="improvements-list"></ul>
+                    </div>
+                </div>
+                <div id="health-risks" class="card">
+                    <div class="card-header" data-bs-toggle="collapse" data-bs-target="#risks-content">
+                        <span><i class="bi bi-exclamation-triangle me-2"></i>건강 위험</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div id="risks-content" class="collapse show card-body">
+                        <ul id="risks-list"></ul>
+                    </div>
+                </div>
+                <div id="recommendations" class="card">
+                    <div class="card-header" data-bs-toggle="collapse" data-bs-target="#recommendations-content">
+                        <span><i class="bi bi-heart me-2"></i>맞춤 추천</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div id="recommendations-content" class="collapse show card-body">
+                        <ul id="recommendations-list"></ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card references-card">
+                    <div class="card-header">
+                        <i class="bi bi-book me-2"></i>참고 정보
+                    </div>
+                    <div class="card-body">
+                        <ul id="references-list" class="list-unstyled"></ul>
+                    </div>
+                </div>
+            </div>
         </div>
+        <div class="text-center mt-4">
+            <button onclick="window.location.href='first.html'" class="btn btn-secondary">홈으로 돌아가기</button>
+        </div>
+        <div class="spinner-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">로딩 중...</span>
+            </div>
+        </div>
+        <div class="error-message text-center mt-3" id="error-message"></div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        window.onload = async function() {
-            const mealData = JSON.parse(localStorage.getItem('mealData'));
-            const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+        document.addEventListener('DOMContentLoaded', async () => {
+            const spinner = document.querySelector('.spinner-container');
+            const errorMessage = document.getElementById('error-message');
 
-            if (!mealData || !userInfo) {
-                document.getElementById('loading').style.display = "none";
-                document.getElementById('analysisResult').style.display = "block";
-                document.getElementById('llmOutput').innerHTML = "<p>⚠️ 필요한 데이터가 없습니다.</p>";
-                return;
-            }
-
-            const requestData = { 
-                user: userInfo, 
-                food: {
-                    breakfast: mealData.breakfast || "",
-                    lunch: mealData.lunch || "",
-                    dinner: mealData.dinner || ""
-                }
-            };
-
-            console.log("Sending request:", requestData);
+            spinner.style.display = 'block';
+            errorMessage.style.display = 'none';
 
             try {
-                const response = await fetch("http://127.0.0.1:5000/food", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(requestData)
+                const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+                const mealData = JSON.parse(localStorage.getItem('mealData'));
+
+                if (!userInfo || !userInfo.name || !mealData) {
+                    throw new Error('사용자 정보 또는 식단 데이터가 없습니다.');
+                }
+
+                console.log('Sending /food request:', JSON.stringify({ user: userInfo, food: mealData }, null, 2));
+
+                const response = await fetch('http://127.0.0.1:5000/food', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user: userInfo,
+                        food: mealData
+                    })
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`서버 응답 오류: ${errorData.detail || response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`분석 요청 실패: ${response.status} - ${errorText}`);
                 }
 
-                const result = await response.json();
-                document.getElementById('loading').style.display = "none";
-                document.getElementById('analysisResult').style.display = "block";
-                document.getElementById('llmOutput').innerHTML = `<div>${result.analysis.replace(/\n/g, '<br>')}</div>`;
-                document.getElementById('retrievedDocs').innerHTML = result.documents
-                    ? result.documents.map(doc => `<div class="retrieved-doc">${doc}</div>`).join('')
-                    : "<p>참고 문서 없음</p>";
+                const data = await response.json();
+                spinner.style.display = 'none';
+                console.log('Raw analysis text:', JSON.stringify(data.analysis, null, 2));
+                console.log('Documents:', JSON.stringify(data.documents, null, 2));
+                parseAndRenderAnalysis(data.analysis, data.documents);
             } catch (error) {
-                document.getElementById('loading').style.display = "none";
-                document.getElementById('analysisResult').style.display = "block";
-                document.getElementById('llmOutput').innerHTML = `<p class="text-danger">❌ 분석 중 오류가 발생했습니다: ${error.message}</p>`;
-                console.error("Error:", error);
+                spinner.style.display = 'none';
+                errorMessage.style.display = 'block';
+                errorMessage.textContent = `오류: ${error.message}`;
+                console.error('Error:', error);
             }
-        };
+        });
+
+        function parseAndRenderAnalysis(analysisText, documents) {
+            const sections = {
+                '영양 균형': [],
+                '개선점': [],
+                '건강 위험': [],
+                '맞춤 추천': []
+            };
+            let currentSection = null;
+
+            const sectionHeaders = {
+                '영양 균형': ['### 영양 균형', '**영양 균형**', '1. 영양 균형', '영양 균형', 'nutrition balance'],
+                '개선점': ['### 개선점', '**개선점**', '2. 개선점', '개선점', 'improvements'],
+                '건강 위험': ['### 건강 위험', '**건강 위험**', '3. 건강 위험', '건강 위험', 'health risks'],
+                '맞춤 추천': ['### 맞춤 추천', '**맞춤 추천**', '4. 맞춤 추천', '맞춤 추천', 'personalized recommendations']
+            };
+
+            const lines = analysisText.split('\n');
+            let i = 0;
+            while (i < lines.length) {
+                let line = lines[i].trim();
+                if (!line) {
+                    i++;
+                    continue;
+                }
+
+                let foundSection = false;
+                for (const [section, headers] of Object.entries(sectionHeaders)) {
+                    if (headers.some(header => line.toLowerCase().includes(header.toLowerCase()))) {
+                        currentSection = section;
+                        foundSection = true;
+                        i++;
+                        break;
+                    }
+                }
+
+                if (!foundSection && currentSection) {
+                    if (line.startsWith('- ') || line.startsWith('* ') || line.match(/^\d+\.\s/) || line.match(/^\d+\)/)) {
+                        sections[currentSection].push(line.replace(/^[-*]\s|^\d+\.\s|^\d+\)\s/, ''));
+                    } else if (line && !line.startsWith('#') && !line.startsWith('==')) {
+                        sections[currentSection].push(line);
+                    }
+                    i++;
+                } else if (!foundSection) {
+                    i++;
+                }
+            }
+
+            console.log('Parsed sections:', JSON.stringify(sections, null, 2));
+
+            renderSection('nutrition-list', sections['영양 균형']);
+            renderSection('improvements-list', sections['개선점']);
+            renderSection('risks-list', sections['건강 위험']);
+            renderSection('recommendations-list', sections['맞춤 추천']);
+            renderReferences(documents);
+        }
+
+        function renderSection(elementId, items) {
+            const list = document.getElementById(elementId);
+            list.innerHTML = '';
+            if (items.length === 0) {
+                list.innerHTML = '<li>정보가 없습니다.</li>';
+                return;
+            }
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                list.appendChild(li);
+            });
+        }
+
+        function renderReferences(documents) {
+            const list = document.getElementById('references-list');
+            list.innerHTML = '';
+            if (!documents || documents.length === 0) {
+                list.innerHTML = '<li>참고 정보가 없습니다.</li>';
+                return;
+            }
+            documents.forEach(doc => {
+                const li = document.createElement('li');
+                li.textContent = doc;
+                li.className = 'mb-2';
+                list.appendChild(li);
+            });
+        }
     </script>
 </body>
 </html>

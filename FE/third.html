@@ -52,7 +52,7 @@
             const dinner = document.getElementById('dinner').value;
 
             const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-            if (!userInfo) {
+            if (!userInfo || !userInfo.name) {
                 alert("로그인 정보가 없습니다. 다시 시도해주세요.");
                 return;
             }
@@ -60,6 +60,7 @@
             const mealData = { breakfast, lunch, dinner, timestamp: new Date().toISOString() };
 
             try {
+                console.log('Sending /add_meal request:', { user: userInfo, meal: mealData });
                 const response = await fetch(`http://127.0.0.1:5000/add_meal`, {
                     method: "POST",
                     headers: {
@@ -71,19 +72,20 @@
                 const result = await response.json();
 
                 if (response.ok) {
+                    console.log('Meal saved:', result);
                     alert("식사 정보가 저장되었습니다.");
                     localStorage.setItem('mealData', JSON.stringify(mealData));
                     window.location.href = 'fourth.html';
                 } else {
+                    console.error('Error response:', result);
                     alert("에러 발생: " + result.detail);
                 }
             } catch (error) {
+                console.error('Request failed:', error);
                 alert("서버 요청 중 오류가 발생했습니다.");
-                console.error(error);
             }
         }
 
-        // 엔터 키로 제출
         document.getElementById("mealForm").addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
                 event.preventDefault();
