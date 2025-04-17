@@ -180,8 +180,7 @@ async def analyze_food(data: FoodAnalysisRequest):
             raise HTTPException(status_code=400, detail="Invalid user data")
 
         user = data.user
-        new_food = data.food.dict()  # timestamp 포함
-
+        # 저장 제거: /add_meal에서 이미 저장됨
         user_ref = db.reference(f'users/{user.name}/meals')
         existing_meals = user_ref.get() or []
         print(f"Existing meals: {json.dumps(existing_meals, ensure_ascii=False)} (type: {type(existing_meals)})")
@@ -190,10 +189,6 @@ async def analyze_food(data: FoodAnalysisRequest):
             print("Resetting invalid meals data to empty list")
             existing_meals = []
         
-        existing_meals.append(new_food)
-        user_ref.set(existing_meals)
-        print(f"Updated meals: {json.dumps(existing_meals, ensure_ascii=False)}")
-
         meal_history_str = "\n".join(
             [f"{i+1}일차: 아침({m['breakfast']}), 점심({m['lunch']}), 저녁({m['dinner']})"
              for i, m in enumerate(existing_meals)]
@@ -215,10 +210,8 @@ async def analyze_food(data: FoodAnalysisRequest):
 
         prompt = f"""
         당신은 전문 영양사이자 건강 관리사입니다. 사용자의 프로필, 식단 데이터, 그리고 참고 정보를 바탕으로 상세하고 정확한 식단 분석을 제공하세요.
-
         ### 참고 정보
         {'(없음)' if not retrieved_texts else chr(10).join(retrieved_texts)}
-
         ### 사용자 정보
         - 이름: {user.name}
         - 나이: {user.age}세
@@ -226,17 +219,14 @@ async def analyze_food(data: FoodAnalysisRequest):
         - 키: {user.height}cm
         - 몸무게: {user.weight}kg
         - BMI: {(user.weight / ((user.height / 100) ** 2)):.1f} (참고용)
-
         ### 사용자 식단 기록
         {meal_history_str}
-
         ### 분석 요청
         다음을 한국어로 작성하세요. **반드시 아래 형식을 정확히 준수**하며, 다른 스타일(예: **, 숫자, 자유 텍스트)을 사용하지 마세요:
         - 각 항목은 '###'으로 시작하는 소제목으로 구분.
         - 각 항목의 내용은 '- '로 시작하는 목록으로 작성.
         - 각 섹션은 최소 2개 이상의 목록 항목 포함.
         - 모든 섹션에 내용이 있어야 하며, 빈 섹션은 허용되지 않음.
-
         1. ### 영양 균형
            - 사용자의 나이, 성별, 키, 몸무게, BMI를 고려하여 식단의 영양소 균형(탄수화물, 단백질, 지방, 비타민 등)을 평가.
            - 부족하거나 과다한 영양소를 구체적으로 설명.
@@ -246,20 +236,6 @@ async def analyze_food(data: FoodAnalysisRequest):
            - 식단과 신체 정보를 바탕으로 잠재적 건강 위험(예: 고혈압, 당뇨, 비만) 분석 및 예방법.
         4. ### 맞춤 추천
            - 사용자의 프로필에 맞춘 1일 식단 예시.
-
-        ### 출력 형식 예시
-        ### 영양 균형
-        - 탄수화물: 잡곡밥은 섬유질이 풍부하여 적절합니다.
-        - 단백질: 연어와 닭가슴살로 적정량 섭취 중입니다.
-        ### 개선점
-        - 된장찌개의 나트륨 함량을 줄이기 위해 저염 된장을 사용하세요.
-        - 채소 섭취를 늘리기 위해 샐러드를 추가하세요.
-        ### 건강 위험
-        - 과도한 나트륨 섭취로 고혈압 위험이 있습니다.
-        - 규칙적인 운동으로 체중을 관리하세요.
-        ### 맞춤 추천
-        - 아침: 오트밀과 블루베리.
-        - 점심: 퀴노아 샐러드와 구운 닭가슴살.
         """
         analysis = query_gemini(prompt)
         print(f"Gemini response: {json.dumps(analysis, ensure_ascii=False)}")
