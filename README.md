@@ -9,7 +9,7 @@
   - `all-MiniLM-L6-v2` 모델을 한국어 데이터로 파인튜닝.
   - 로지스틱 회귀 분류기로 긍정/부정 식품 분류.
   - FAISS 벡터 저장소로 효율적인 검색.
-- **데이터셋**: `AI/health_guidelines_training.json` (한국어 100개, 긍정 70개, 부정 30개).
+- **데이터셋**: `AI/health_guidelines_training.json` (한국어 432개).
 - **기술 스택**: Python 3.10, Sentence-Transformers, LangChain, FAISS, Scikit-learn, PyTorch.
 
 ## 설치 방법
