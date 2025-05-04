@@ -28,12 +28,14 @@
                 <small class="text-danger" id="dinnerError"></small>
             </div>
 
-            <button type="button" onclick="submitMeals()" id="submitButton">제출</button>
+            <button type="button" id="submitButton">제출</button>
             <p id="successMessage" style="display: none;">✅ 저장되었습니다!</p>
         </form>
     </div>
 
     <script>
+        let isSubmitting = false; // 중복 요청 방지 플래그
+
         function validateInput(id, message) {
             const input = document.getElementById(id);
             const errorMsg = document.getElementById(id + "Error");
@@ -47,13 +49,28 @@
         }
 
         async function submitMeals() {
+            if (isSubmitting) return; // 이미 요청 중이면 무시
+            isSubmitting = true;
+            const submitButton = document.getElementById('submitButton');
+            submitButton.disabled = true; // 버튼 비활성화
+
             const breakfast = document.getElementById('breakfast').value;
             const lunch = document.getElementById('lunch').value;
             const dinner = document.getElementById('dinner').value;
 
+            if (!validateInput('breakfast', '아침 식사를 입력하세요') ||
+                !validateInput('lunch', '점심 식사를 입력하세요') ||
+                !validateInput('dinner', '저녁 식사를 입력하세요')) {
+                isSubmitting = false;
+                submitButton.disabled = false;
+                return;
+            }
+
             const userInfo = JSON.parse(localStorage.getItem('userInfo'));
             if (!userInfo || !userInfo.name) {
                 alert("로그인 정보가 없습니다. 다시 시도해주세요.");
+                isSubmitting = false;
+                submitButton.disabled = false;
                 return;
             }
 
@@ -79,13 +96,21 @@
                 } else {
                     console.error('Error response:', result);
                     alert("에러 발생: " + result.detail);
+                    isSubmitting = false;
+                    submitButton.disabled = false;
                 }
             } catch (error) {
                 console.error('Request failed:', error);
                 alert("서버 요청 중 오류가 발생했습니다.");
+                isSubmitting = false;
+                submitButton.disabled = false;
             }
         }
 
+        // 버튼 클릭 이벤트
+        document.getElementById("submitButton").addEventListener("click", submitMeals);
+
+        // Enter 키 이벤트
         document.getElementById("mealForm").addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
                 event.preventDefault();
