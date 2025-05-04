@@ -1,74 +1,55 @@
 import json
-import pandas as pd
-import torch
-from sentence_transformers import SentenceTransformer, InputExample, losses
+import numpy as np
+from sentence_transformers import SentenceTransformer, losses, InputExample
 from torch.utils.data import DataLoader
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score, classification_report
+from sklearn.metrics import classification_report
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-import os
 
-# 경로 설정
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TRAIN_DATA_PATH = os.path.join(BASE_DIR, 'AI', 'health_guidelines_training.json')
-GUIDELINES_PATH = os.path.join(BASE_DIR, 'BE', 'health_guidelines.json')
-OUTPUT_MODEL_PATH = os.path.join(BASE_DIR, 'AI', 'fine_tuned_mini_lm')
-FAISS_INDEX_PATH = os.path.join(BASE_DIR, 'AI', 'faiss_index')
+# 데이터 로드
+with open("health_guidelines_training.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
 
-# 1. 데이터 로드
-try:
-    with open(TRAIN_DATA_PATH, 'r', encoding='utf-8') as f:
-        train_data = json.load(f)
-except FileNotFoundError:
-    raise FileNotFoundError(f"학습 데이터셋 {TRAIN_DATA_PATH}이 존재하지 않습니다.")
+# 중복 식품 제거
+food_dict = {d["food"]: d for d in data}
+data = list(food_dict.values())
+print(f"중복 제거 후 데이터 수: {len(data)}")
 
-# 데이터프레임 변환
-df = pd.DataFrame(train_data)
-texts = df['text'].tolist()
-labels = df['label'].tolist()
+# 데이터 준비
+texts = [d["text"] for d in data]
+labels = [d["label"] for d in data]
 
-# 2. 임베딩 모델 파인튜닝
-model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-train_examples = [InputExample(texts=[text], label=label) for text, label in zip(texts, labels)]
-train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=16)
-train_loss = losses.BatchHardTripletLoss(model=model)
+# 임베딩 생성
+model = SentenceTransformer("all-MiniLM-L6-v2")
+embeddings = model.encode(texts, convert_to_numpy=True)
 
-model.fit(
-    train_objectives=[(train_dataloader, train_loss)],
-    epochs=3,
-    warmup_steps=10,
-    output_path=OUTPUT_MODEL_PATH
+# 학습/테스트 분할
+X_train, X_val, y_train, y_val = train_test_split(
+    embeddings, labels, test_size=0.3, random_state=42, stratify=labels
 )
-print(f"임베딩 모델 파인튜닝 완료, 저장 경로: {OUTPUT_MODEL_PATH}")
 
-# 3. 분류기 학습
-X_train, X_val, y_train, y_val = train_test_split(texts, labels, test_size=0.2, random_state=42)
-X_train_emb = model.encode(X_train, convert_to_tensor=True).cpu().numpy()
-X_val_emb = model.encode(X_val, convert_to_tensor=True).cpu().numpy()
+# 분류기 학습
+clf = LogisticRegression(C=0.1, max_iter=1000)
+clf.fit(X_train, y_train)
 
-classifier = LogisticRegression(max_iter=1000)
-classifier.fit(X_train_emb, y_train)
+# 교차 검증
+scores = cross_val_score(clf, embeddings, labels, cv=5, scoring="f1_macro")
+print(f"5-폴드 F1 스코어: {scores.mean():.4f} ± {scores.std():.4f}")
 
-y_pred = classifier.predict(X_val_emb)
-accuracy = accuracy_score(y_val, y_pred)
-f1 = f1_score(y_val, y_pred)
-print(f"분류기 평가 - 정확도: {accuracy:.4f}, F1 스코어: {f1:.4f}")
-
-# 4. 성능 분석: Precision, Recall, F1-score, Support
+# 테스트 데이터로 평가
+y_pred = clf.predict(X_val)
+print("\n실제 라벨 (처음 10개):", y_val[:10])
+print("예측 라벨 (처음 10개):", y_pred[:10])
 print("\n분류기 성능 분석:")
-print(classification_report(y_val, y_pred, target_names=['부정 (0)', '긍정 (1)']))
+print(classification_report(y_val, y_pred, target_names=["부정 (0)", "긍정 (1)"]))
 
-# 5. FAISS 검색에 파인튜닝 모델 적용
-try:
-    with open(GUIDELINES_PATH, 'r', encoding='utf-8') as f:
-        guidelines_data = json.load(f)
-except FileNotFoundError:
-    raise FileNotFoundError(f"가이드라인 데이터셋 {GUIDELINES_PATH}이 존재하지 않습니다.")
+# FAISS 벡터 저장소 생성
+hf_embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+vector_store = FAISS.from_texts(texts, hf_embeddings, metadatas=data)
+vector_store.save_local("faiss_index")
 
-documents = [item.get('health_benefits', '') for item in guidelines_data]
-fine_tuned_embeddings = HuggingFaceEmbeddings(model_name=OUTPUT_MODEL_PATH)
-vector_store = FAISS.from_texts(documents, fine_tuned_embeddings)
-vector_store.save_local(FAISS_INDEX_PATH)
-print(f"FAISS 벡터 저장소 저장 완료: {FAISS_INDEX_PATH}")
+# 모델 저장 (파인튜닝 생략, 필요 시 추가)
+model.save("fine_tuned_mini_lm")
+print("모델 및 FAISS 인덱스 저장 완료")
