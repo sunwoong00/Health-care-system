@@ -5,7 +5,7 @@ from sentence_transformers import SentenceTransformer, InputExample, losses
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score, classification_report
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 import os
@@ -56,7 +56,11 @@ accuracy = accuracy_score(y_val, y_pred)
 f1 = f1_score(y_val, y_pred)
 print(f"분류기 평가 - 정확도: {accuracy:.4f}, F1 스코어: {f1:.4f}")
 
-# 4. FAISS 검색에 파인튜닝 모델 적용
+# 4. 성능 분석: Precision, Recall, F1-score, Support
+print("\n분류기 성능 분석:")
+print(classification_report(y_val, y_pred, target_names=['부정 (0)', '긍정 (1)']))
+
+# 5. FAISS 검색에 파인튜닝 모델 적용
 try:
     with open(GUIDELINES_PATH, 'r', encoding='utf-8') as f:
         guidelines_data = json.load(f)

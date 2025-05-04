@@ -8,31 +8,31 @@ tags:
 - loss:BatchHardTripletLoss
 base_model: sentence-transformers/all-MiniLM-L6-v2
 widget:
-- source_sentence: 식이섬유 풍부, 혈당 안정, 심혈관 건강 지원
+- source_sentence: 발효된 콩, 프로바이오틱스 함유, 장 건강 지원
+  sentences:
+  - 단백질 풍부, 저칼로리, 근육 건강 지원
+  - 트랜스지방 과다, 콜레스테롤 증가
+  - 오메가-3 풍부, 뇌 건강 지원
+- source_sentence: 비타민 A 풍부, 눈 건강 지원
+  sentences:
+  - 나트륨 과다, 영양소 부족, 혈압 상승 위험
+  - 단백질과 콜린 풍부, 뇌 건강 지원
+  - 설탕과 지방 과다, 비만 위험
+- source_sentence: 설탕 과다, 항산화제 부족
   sentences:
   - 비타민 C 풍부, 면역력 증진
-  - 트랜스지방 과다, 심장병 위험 증가
-  - 설탕과 지방 과다, 체중 증가 위험
-- source_sentence: 설탕 과다, 인슐린 저항성 위험
+  - 나트륨 과다, 영양소 부족
+  - 비타민 K 풍부, 뼈 건강 지원
+- source_sentence: 포화지방 과다, 콜레스테롤 증가
   sentences:
-  - 트랜스지방 과다, 콜레스테롤 증가
-  - 식이섬유 풍부, 혈당 안정
+  - 지방과 설탕 과다, 영양소 부족
   - 지방과 나트륨 과다, 심장병 위험
-- source_sentence: 포화지방 과다, 심장병 위험
+  - 나트륨과 지방 과다, 영양소 부족
+- source_sentence: 설탕 과다, 체중 증가 및 치아 손상 위험
   sentences:
-  - 발효된 콩, 단백질 풍부, 소화 촉진
-  - 식이섬유 풍부, 소화 건강 증진
-  - 발효 음료, 소화 촉진
-- source_sentence: 비타민 K 풍부, 뼈 건강 지원
-  sentences:
-  - 항산화제 풍부, 면역력 증진
-  - 카페인과 설탕 과다, 심박수 증가 위험
-  - 지방 과다, 심혈관 건강 해침
-- source_sentence: 수분과 비타민 K 풍부, 피부 건강 지원
-  sentences:
-  - 비타민 D 풍부, 뼈 건강 지원
-  - 설탕 과다, 영양소 부족
-  - 지방과 나트륨 과다, 심장병 위험
+  - 철분과 비타민 A 풍부, 혈액 건강 지원
+  - 칼슘 풍부, 뼈 건강 지원
+  - 수분과 비타민 K 풍부, 피부 건강 지원
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -87,9 +87,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '수분과 비타민 K 풍부, 피부 건강 지원',
-    '설탕 과다, 영양소 부족',
-    '비타민 D 풍부, 뼈 건강 지원',
+    '설탕 과다, 체중 증가 및 치아 손상 위험',
+    '칼슘 풍부, 뼈 건강 지원',
+    '철분과 비타민 A 풍부, 혈액 건강 지원',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -152,11 +152,11 @@ You can finetune this model on your own dataset.
   | type    | string                                                                            | int                                             |
   | details | <ul><li>min: 19 tokens</li><li>mean: 32.0 tokens</li><li>max: 53 tokens</li></ul> | <ul><li>0: ~49.38%</li><li>1: ~50.62%</li></ul> |
 * Samples:
-  | sentence_0                         | label          |
-  |:-----------------------------------|:---------------|
-  | <code>설탕 과다, 체중 증가 위험</code>       | <code>0</code> |
-  | <code>칼슘과 오메가-3 풍부, 뼈 건강 지원</code> | <code>1</code> |
-  | <code>설탕과 지방 과다, 비만 위험</code>      | <code>0</code> |
+  | sentence_0                     | label          |
+  |:-------------------------------|:---------------|
+  | <code>비타민 C 풍부, 면역력 강화</code>  | <code>1</code> |
+  | <code>포화지방 과다, 심장병 위험</code>   | <code>0</code> |
+  | <code>비타민 A 풍부, 눈 건강 지원</code> | <code>1</code> |
 * Loss: [<code>BatchHardTripletLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#batchhardtripletloss)
 
 ### Training Hyperparameters
